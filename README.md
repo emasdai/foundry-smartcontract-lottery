@@ -12,4 +12,3 @@ this project build for proveably random smart contract lottery
     - and this is will be done progammitically
     - using chainlink VRF --> for random number (randomness)
     - using Chainlink automation --> time base trigger 
-3. 
