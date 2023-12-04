@@ -9,11 +9,20 @@ pragma solidity ^0.8.18;
     *   @dev    implement chainlin VRFv2 
  */
 contract Raffle {
-    function enterRaffle() public{
 
+    uint256 private immutable i_entranceFee;  // i_ adalah immutable, untuk menghemat gas Fee
+
+    // constuctor dieksekusi pada saat pembuatan kontrak
+    constructor(uint256 entranceFee){
+        i_entranceFee = entranceFee;
     }
 
-    function pickWinner() public{
-        
+    function enterRaffle() public payable{}
+
+    function pickWinner() public{}
+
+    //getter function
+    function getEntranceFee() external view returns(uint256) {
+        return i_entranceFee;
     }
 }
