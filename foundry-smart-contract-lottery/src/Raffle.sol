@@ -20,6 +20,8 @@
 // internal & private view & pure functions
 // external & public view & pure functions
 
+// dalam function kita menggunakan format CEI (Checks, Effects, Interactions)
+
 // SPDX-license-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -91,7 +93,7 @@ abstract contract Raffle is VRFConsumerBaseV2 {
     }
 
     /**
-    1. mendapatkan random number
+    1. mendapatkan random number 
     2. menggunakan random number kepada player
     3. otomatis memanggil player */
     function pickWinner() external{
@@ -112,6 +114,8 @@ abstract contract Raffle is VRFConsumerBaseV2 {
 
     // memilih winner, menggunakan fuction fullfillRandomWords dari VRFConsumerBaseV2
     function fulfillRandomWords( uint256 requestId, uint256[] memory randomWords) internal override {
+        //Check
+        //Effects (Our own contract)
         uint256 indexOfWinner = randomWords[0] % s_players.length;  // [index] dari pemenang adalah randonwords modulo sebanyak players
         address payable Winner = s_players[indexOfWinner];  // untuk mendapatkan address dari winner
         s_recentWinner = Winner;    // memasukan winner kedalam variable recentWinner
@@ -119,12 +123,14 @@ abstract contract Raffle is VRFConsumerBaseV2 {
 
         s_players  = new address payable[](0);  // start game dari awal, memilih winner yang baru
         s_LastTimeStamp = block.timestamp;  // akan mengulang waktu dari 0 untuk lottery
+        emit WinnerPick(Winner);    // menambahkan kedalam event WinnerPick
 
+        // Interaction
         (bool success,) = Winner.call{value: address(this).balance}("");    // saat sukses, memberikan semua Eth yang ada didalam kontrak
         if(!success){       // jika tidak sukses, maka akan error
             revert Raffle__TransferedFailed();
         }
-        emit WinnerPick(Winner);    // menambahkan kedalam event WinnerPick
+        
     }
 
     //getter function
