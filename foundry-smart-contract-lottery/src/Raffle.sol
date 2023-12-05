@@ -36,7 +36,14 @@ import {VRFConsumerBaseV2} from "../lib/chainlink-brownie-contracts/contracts/sr
 abstract contract Raffle is VRFConsumerBaseV2 {
 
     error Raffle__NotEnoughEthSend();   // digunakan jika eth yang di sent kurang, error digunakan untuk efisiensi gas fee, menggunakan awalan nama contract agar mudah diketahui saat error
-    address payable[] private s_player;     // array yang digunakan untuk menyimpan address s_ adalah storage variable, payable dapat menerima eth didalam kontrak
+    error Raffle__TransferedFailed();   // digunakan jika transfer saat mengirimkan ke winner tidak berhasil
+    error Raffle__RaffleNotOpen();      // digunakan jika raffle tidak terbuka
+
+    /** TYPE DECLARATION */
+    enum RaffleState { // useful to model choice and keep track of state, dapat dikonfersi menjadi integer
+        OPEN,       // 0
+        CALCULATING // 1
+    }    
 
     /** STATE VARIABLE */
     // Constants are variables that cannot be modified. UPPERCASE agar gas efisien
@@ -49,10 +56,14 @@ abstract contract Raffle is VRFConsumerBaseV2 {
     bytes23 private immutable i_gasLane;    // KeyHash yang akan digunakan dalam chainlink vrf
     uint64 private immutable i_subscriptionId;  // 
     uint32 private immutable i_callbackGasLimit;   // max gas yang akan digunakan untuk request
+    address private s_recentWinner;
     uint256 private s_LastTimeStamp;
+    address payable[] private s_players;     // array yang digunakan untuk menyimpan address s_ adalah storage variable, payable dapat menerima eth didalam kontrak
+    RaffleState private s_raffleState;  // digunakan untuk menyimpan default dari enum RaffleState
 
-    /** EVENT */
+    /** EVENT */ // Allow logging to the Ethereum blockchain.
     event EnteredRaffle(address indexed player);
+    event WinnerPick(address indexed winner);   
 
     // constuctor dieksekusi pada saat pembuatan kontrak
     constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes23 gasLine, uint64 subscriptionId, uint32 callbackGasLimit) VRFConsumerBaseV2(vrfCoordinator){
@@ -62,6 +73,7 @@ abstract contract Raffle is VRFConsumerBaseV2 {
         i_gasLane = gasLine;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+        s_raffleState = RaffleState.OPEN;   // default untuk enum RaffleState
         s_LastTimeStamp = block.timestamp;
     }
 
@@ -71,8 +83,11 @@ abstract contract Raffle is VRFConsumerBaseV2 {
         if(msg.value < i_entranceFee){  //  jika msg.value(Eth) kurang dari i_entranceFee, maka akan revert ke NotEnoughEthSend
             revert Raffle__NotEnoughEthSend(); 
         }
-        s_player.push(payable(msg.sender)); // akan menambahkan address pada array (storage) s_player, payable karena bisa mengirim eth ke contract
-        emit EnteredRaffle(msg.sender);
+        if (s_raffleState != RaffleState.OPEN){ // jika Enum RaffleState tidak OPEN, akan muncul error Raffle__RaffleNotOpen
+            revert Raffle__RaffleNotOpen();
+        }
+        s_players.push(payable(msg.sender)); // akan menambahkan address pada array (storage) s_player, payable karena bisa mengirim eth ke contract
+        emit EnteredRaffle(msg.sender); // address yang memasuki Raffle
     }
 
     /**
@@ -83,8 +98,9 @@ abstract contract Raffle is VRFConsumerBaseV2 {
         if((block.timestamp - s_LastTimeStamp) < i_interval){ // cek untuk melihat apakah waktu yang digunakan sudah cukup
             revert();
         }
-        // 1. request RNG <- Chainlink VRF
-        // Will revert if subscription is not set and funded.
+        s_raffleState = RaffleState.CALCULATING;    // enum RaffleState berada pada state CALCULATING agar tidak ada yang bisa transfer saat pickWinner
+
+        // 1. request RNG <- Chainlink VRF , Will revert if subscription is not set and funded.
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,              // keyhash
             i_subscriptionId,       // Subscription ID
@@ -94,13 +110,25 @@ abstract contract Raffle is VRFConsumerBaseV2 {
         );
     }
 
-    // 
-    function fulfillRandomWord( uint256 requestId, uint256[] memory randomWords) internal  {
-        
+    // memilih winner, menggunakan fuction fullfillRandomWords dari VRFConsumerBaseV2
+    function fulfillRandomWords( uint256 requestId, uint256[] memory randomWords) internal override {
+        uint256 indexOfWinner = randomWords[0] % s_players.length;  // [index] dari pemenang adalah randonwords modulo sebanyak players
+        address payable Winner = s_players[indexOfWinner];  // untuk mendapatkan address dari winner
+        s_recentWinner = Winner;    // memasukan winner kedalam variable recentWinner
+        s_raffleState = RaffleState.OPEN;  // setelah ditemukan pemenang, maka raffle akan dibuka kembali (tidak calculating)
+
+        s_players  = new address payable[](0);  // start game dari awal, memilih winner yang baru
+        s_LastTimeStamp = block.timestamp;  // akan mengulang waktu dari 0 untuk lottery
+
+        (bool success,) = Winner.call{value: address(this).balance}("");    // saat sukses, memberikan semua Eth yang ada didalam kontrak
+        if(!success){       // jika tidak sukses, maka akan error
+            revert Raffle__TransferedFailed();
+        }
+        emit WinnerPick(Winner);    // menambahkan kedalam event WinnerPick
     }
 
     //getter function
     function getEntranceFee() external view returns(uint256) {  // external agar semua orang bisa melihat i_entranceFee
-        return i_entranceFee;
+        return i_entranceFee;   // melihat diaya minimal 
     }
 }
