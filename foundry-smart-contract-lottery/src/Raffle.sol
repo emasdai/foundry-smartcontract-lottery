@@ -40,6 +40,12 @@ abstract contract Raffle is VRFConsumerBaseV2 {
     error Raffle__NotEnoughEthSend();   // digunakan jika eth yang di sent kurang, error digunakan untuk efisiensi gas fee, menggunakan awalan nama contract agar mudah diketahui saat error
     error Raffle__TransferedFailed();   // digunakan jika transfer saat mengirimkan ke winner tidak berhasil
     error Raffle__RaffleNotOpen();      // digunakan jika raffle tidak terbuka
+    error Raffle__upkeepNotNeeded(      // digunakan jika tidak menggunakan checkupKeep
+        uint256 currentBalance,
+        uint256 numPlayers,
+        uint256 raffleState
+    );    
+
 
     /** TYPE DECLARATION */
     enum RaffleState { // useful to model choice and keep track of state, dapat dikonfersi menjadi integer
@@ -92,18 +98,44 @@ abstract contract Raffle is VRFConsumerBaseV2 {
         emit EnteredRaffle(msg.sender); // address yang memasuki Raffle
     }
 
+    // kapan winner akan dimilih? (pick)
+    /**
+    * @dev ini adalah fungsi yang menggunakan Chainlink Automation, hal yang harus dilakukan agar fungsi ini dapat berjalan:
+    1. Time interval berada pada saat raffle sudah selesai
+    2. raffle berada pada OPEN state
+    3. kontrak memiliki ETH / player
+    4. subscription funded dengan LINK
+     */
+    function checkUpkeep (bytes memory) public view returns(bool upkeepNeeded, bytes memory /* data */ ){
+        bool timeHasPass = (block.timestamp - s_LastTimeStamp) >= i_interval; // 1. Time interval berada pada saat raffle sudah selesai, cek untuk melihat apakah waktu yang digunakan sudah cukup
+        bool isOpen = RaffleState.OPEN == s_raffleState;    // 2. Raffle berada pada OPEN state 
+        bool hasBalance = address(this).balance > 0;    // 3. kontrak memiliki ETH / player
+        bool hasPlayer = s_players.length > 0; 
+        upkeepNeeded = (timeHasPass && isOpen && hasBalance && hasPlayer);  // upKeepNeede adalah gabungan dari semua ini
+        return (upkeepNeeded, "0x0");
+    }
+
     /**
     1. mendapatkan random number 
     2. menggunakan random number kepada player
     3. otomatis memanggil player */
-    function pickWinner() external{
+    function performUpKeep(bytes calldata /* PERFORMA DATA */) external{
+        (bool upkeepNeeded, ) = checkUpkeep("");    // memanggil function checkUpKeep
+        if (!upkeepNeeded){
+            revert Raffle__upkeepNotNeeded(     // error yang akan muncil jika tidak checkUpkeep
+                address(this).balance,
+                s_players.length,
+                uint256(s_raffleState)
+            );
+        }
+
         if((block.timestamp - s_LastTimeStamp) < i_interval){ // cek untuk melihat apakah waktu yang digunakan sudah cukup
             revert();
         }
         s_raffleState = RaffleState.CALCULATING;    // enum RaffleState berada pada state CALCULATING agar tidak ada yang bisa transfer saat pickWinner
 
         // 1. request RNG <- Chainlink VRF , Will revert if subscription is not set and funded.
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(
+        i_vrfCoordinator.requestRandomWords(
             i_gasLane,              // keyhash
             i_subscriptionId,       // Subscription ID
             REQUEST_CONFIRMATION,   // request confirmation
@@ -113,7 +145,7 @@ abstract contract Raffle is VRFConsumerBaseV2 {
     }
 
     // memilih winner, menggunakan fuction fullfillRandomWords dari VRFConsumerBaseV2
-    function fulfillRandomWords( uint256 requestId, uint256[] memory randomWords) internal override {
+    function fulfillRandomWords(  uint256 /*requestId*/ , uint256[] memory randomWords) internal override {
         //Check
         //Effects (Our own contract)
         uint256 indexOfWinner = randomWords[0] % s_players.length;  // [index] dari pemenang adalah randonwords modulo sebanyak players
@@ -136,5 +168,6 @@ abstract contract Raffle is VRFConsumerBaseV2 {
     //getter function
     function getEntranceFee() external view returns(uint256) {  // external agar semua orang bisa melihat i_entranceFee
         return i_entranceFee;   // melihat diaya minimal 
+
     }
 }
