@@ -170,4 +170,8 @@ contract Raffle is VRFConsumerBaseV2 {
         return i_entranceFee;   // melihat diaya minimal 
 
     }
+
+    function getRaffleState() external view returns(RaffleState){
+        return s_raffleState;
+    }
 }
