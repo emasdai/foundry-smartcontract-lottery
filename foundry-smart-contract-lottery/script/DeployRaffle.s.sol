@@ -6,7 +6,7 @@ import {HelperConfig} from "../script/HelperConfig.s.sol";
 
 
 // contract untuk mendeploy raffle
-contract deployRaffle is Script{
+contract DeployRaffle is Script{
     function run() external returns(Raffle) {  
         HelperConfig helperConfig = new HelperConfig(); // memanggil contract HelperConfig
         (
