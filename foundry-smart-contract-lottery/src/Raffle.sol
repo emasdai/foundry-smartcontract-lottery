@@ -1,3 +1,6 @@
+//SPDX-license-Identifier: MIT
+pragma solidity ^0.8.18;
+
 // Layout of Contract:
 // version
 // imports
@@ -22,9 +25,6 @@
 
 // dalam function kita menggunakan format CEI (Checks, Effects, Interactions)
 
-// SPDX-license-Identifier: MIT
-pragma solidity ^0.8.18;
-
 /**
     *   @title  a sample raffle contract
     *   @author emasdai
@@ -35,7 +35,7 @@ pragma solidity ^0.8.18;
 import {VRFCoordinatorV2Interface} from "../lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "../lib/chainlink-brownie-contracts/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-abstract contract Raffle is VRFConsumerBaseV2 {
+contract Raffle is VRFConsumerBaseV2 {
 
     error Raffle__NotEnoughEthSend();   // digunakan jika eth yang di sent kurang, error digunakan untuk efisiensi gas fee, menggunakan awalan nama contract agar mudah diketahui saat error
     error Raffle__TransferedFailed();   // digunakan jika transfer saat mengirimkan ke winner tidak berhasil
@@ -61,7 +61,7 @@ abstract contract Raffle is VRFConsumerBaseV2 {
     uint256 private immutable i_entranceFee;  // i_ adalah immutable, untuk menghemat gas Fee
     uint256 private immutable i_interval;   // durasi dari lottery dalam detik
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator; // address vrf coordinator untuk random number, mengambik dari function yang ada di VRFCoordinatorV2Interface
-    bytes23 private immutable i_gasLane;    // KeyHash yang akan digunakan dalam chainlink vrf
+    bytes32 private immutable i_gasLane;    // KeyHash yang akan digunakan dalam chainlink vrf
     uint64 private immutable i_subscriptionId;  // 
     uint32 private immutable i_callbackGasLimit;   // max gas yang akan digunakan untuk request
     address private s_recentWinner;
@@ -74,11 +74,11 @@ abstract contract Raffle is VRFConsumerBaseV2 {
     event WinnerPick(address indexed winner);   
 
     // constuctor dieksekusi pada saat pembuatan kontrak
-    constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes23 gasLine, uint64 subscriptionId, uint32 callbackGasLimit) VRFConsumerBaseV2(vrfCoordinator){
+    constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes32 gasLane, uint64 subscriptionId, uint32 callbackGasLimit) VRFConsumerBaseV2(vrfCoordinator){
         i_entranceFee = entranceFee;
         i_interval = interval;
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator);
-        i_gasLane = gasLine;
+        i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
         s_raffleState = RaffleState.OPEN;   // default untuk enum RaffleState

@@ -13,5 +13,12 @@ this project build for proveably random smart contract lottery
     - using chainlink VRF --> for random number (randomness)
     - using Chainlink automation --> time base trigger 
 
+# test
+1. add script for deploy
+2. write our test
+    - work on local chain
+    - forked on Testnet
+    - forked on Mainnet
+
 # initiate
 1. using foundry (curl -L https://foundry.paradigm.xyz | bash)
