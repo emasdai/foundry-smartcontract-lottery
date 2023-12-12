@@ -20,6 +20,7 @@ contract RaffleTest is Test{
     bytes32 gasLane;
     uint64 subscriptionId;
     uint32 callbackGasLimit;
+    address link;
 
     address public PLAYER = makeAddr("player");
     uint256 public constant STARTING_USER_BALANCE = 10 ether; // 10 link
@@ -33,7 +34,9 @@ contract RaffleTest is Test{
             vrfCoordinator,
             gasLane,
             subscriptionId,
-            callbackGasLimit
+            callbackGasLimit,
+            link
+            
         ) = helperConfig.ActiveNetworkConfig();
         vm.deal(PLAYER, STARTING_USER_BALANCE); // menambahkan balance saat testing
 
@@ -69,6 +72,17 @@ contract RaffleTest is Test{
         vm.expectEmit(true, false, false, false, address(raffle));
         emit EnteredRaffle(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
-
     }
+    function testCanEnterWhenRaffleIsCalculating() public {
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+        vm.warp(block.timestamp + interval +1 ); // set block.time 
+        vm.roll(block.timestamp + 1); // set block.number
+        raffle.performUpKeep(""); // memanggil function PerformUpKeep pada Raffle.sol
+
+        vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+
+    }   
 }

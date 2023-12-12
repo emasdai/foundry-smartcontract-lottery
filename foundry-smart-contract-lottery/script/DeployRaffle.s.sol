@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 import {Script} from "../lib/forge-std/src/Script.sol";
 import {Raffle} from "../src/Raffle.sol";
 import {HelperConfig} from "../script/HelperConfig.s.sol";
+import {CreateSubscription} from "../script/Interactions.s.sol";
 
 
 // contract untuk mendeploy raffle
@@ -15,8 +16,19 @@ contract DeployRaffle is Script{
             address vrfCoordinator,
             bytes32 gasLane,
             uint64 subscriptionId,
-            uint32 callbackGasLimit) = helperConfig.ActiveNetworkConfig();  // mengambil variable dari ActiveNetworkConfig
+            uint32 callbackGasLimit,
+            address link) = helperConfig.ActiveNetworkConfig();  // mengambil variable dari ActiveNetworkConfig
         
+        if(subscriptionId == 0){
+            // kita harus membuat subscriptionID!
+            CreateSubscription createSubscription = new CreateSubscription();
+            subscriptionId = createSubscription.createSubscription(
+                vrfCoordinator);
+
+            // Fund it!
+
+        }
+
         vm.startBroadcast();
         Raffle raffle = new Raffle(
             entranceFee,
