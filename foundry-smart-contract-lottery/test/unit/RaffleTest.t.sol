@@ -7,6 +7,10 @@ import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 contract RaffleTest is Test{
+
+    /** Events */
+    event EnteredRaffle(address indexed player);
+
     Raffle raffle;  // menyimpan variable Raffle pada raffle
     HelperConfig helperConfig;
 
@@ -29,10 +33,42 @@ contract RaffleTest is Test{
             vrfCoordinator,
             gasLane,
             subscriptionId,
-            callbackGasLimit) = helperConfig.ActiveNetworkConfig();
+            callbackGasLimit
+        ) = helperConfig.ActiveNetworkConfig();
+        vm.deal(PLAYER, STARTING_USER_BALANCE); // menambahkan balance saat testing
+
+        
     }
 
     function testRaffleInitializesInOpenState() public view {
         assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN); // mendapatkan enum dari RaffleState berupa OPEN
+    }
+
+
+    function testRaffleRevertsWhenYouDontPayEnough() public {
+        // Arrange
+        vm.prank(PLAYER);
+        // Act
+        vm.expectRevert(Raffle.Raffle__NotEnoughEthSend.selector);    // akan revert error jika Eth yang dikirim kurang
+        // Assert
+        raffle.enterRaffle();
+    }
+
+    function testRaffleRecordsPlayerWhenTheyEnter() public {
+        // Arrange
+        vm.prank(PLAYER);
+        // Act
+        raffle.enterRaffle{value: entranceFee}();
+        address playerRecorded = raffle.getPlayer(0);
+        //Assert
+        assert(playerRecorded == PLAYER);
+    }
+
+    function testEmitEventOnEntrance() public { // testing event on foundry
+        vm.prank(PLAYER);
+        vm.expectEmit(true, false, false, false, address(raffle));
+        emit EnteredRaffle(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+
     }
 }
