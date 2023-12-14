@@ -106,7 +106,7 @@ contract Raffle is VRFConsumerBaseV2 {
     3. kontrak memiliki ETH / player
     4. subscription funded dengan LINK
      */
-    function checkUpkeep (bytes memory) public view returns(bool upkeepNeeded, bytes memory /* data */ ){
+    function checkUpkeep (bytes memory) public view returns( bool upkeepNeeded, bytes memory /* data */ ){
         bool timeHasPass = (block.timestamp - s_LastTimeStamp) >= i_interval; // 1. Time interval berada pada saat raffle sudah selesai, cek untuk melihat apakah waktu yang digunakan sudah cukup
         bool isOpen = RaffleState.OPEN == s_raffleState;    // 2. Raffle berada pada OPEN state 
         bool hasBalance = address(this).balance > 0;    // 3. kontrak memiliki ETH / player

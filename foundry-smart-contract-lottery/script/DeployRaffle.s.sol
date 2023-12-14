@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 import {Script} from "../lib/forge-std/src/Script.sol";
 import {Raffle} from "../src/Raffle.sol";
 import {HelperConfig} from "../script/HelperConfig.s.sol";
-import {CreateSubscription} from "../script/Interactions.s.sol";
+import {CreateSubscription, FundSubscription, AddConsumer} from "../script/Interactions.s.sol";
 
 
 // contract untuk mendeploy raffle
@@ -26,9 +26,13 @@ contract DeployRaffle is Script{
                 vrfCoordinator);
 
             // Fund it!
+            FundSubscription fundSubscription = new FundSubscription();
+            fundSubscription.fundSubscription(vrfCoordinator, subscriptionId, link);
+
 
         }
 
+        // melaunch raffle ( membuat raffle baru)
         vm.startBroadcast();
         Raffle raffle = new Raffle(
             entranceFee,
@@ -39,6 +43,10 @@ contract DeployRaffle is Script{
             callbackGasLimit
         );
         vm.stopBroadcast();
+
+        // menambahkan consumer baru
+        AddConsumer addConsumer = new AddConsumer();
+        addConsumer.addConsumer(address(raffle), vrfCoordinator, subscriptionId);
         return (raffle, helperConfig);
 
     }

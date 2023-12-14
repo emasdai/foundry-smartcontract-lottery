@@ -83,6 +83,34 @@ contract RaffleTest is Test{
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
         vm.prank(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
-
     }   
+
+    //// CheckUpKeep
+    function testCheckUpKeepReturnsFalseIfitHasNoBalance()public{
+        // semua dibuat positif untuk mengecek
+        // Arrange
+        vm.warp(block.timestamp + interval + 1);    // set block.time 
+        vm.roll(block.number + 1);  // set block.number
+
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+
+        //assert
+        assert(!upkeepNeeded); // assert tidak fales = true
+    }
+
+    function testCheckUpKeepReturnsFalseIfitRaffleNotOpen() public{
+        // Arrrange
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        raffle.performUpKeep("");   // dalam CALCULATING_STATE
+        
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+        
+        //Assert
+        assert(upkeepNeeded == false);
+    }
 }
