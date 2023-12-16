@@ -6,6 +6,7 @@ import {Raffle} from "../../src/Raffle.sol";
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Vm} from "../../lib/forge-std/src/Vm.sol";
+import {VRFCoordinatorV2Mock} from "../../lib/chainlink-brownie-contracts/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
 
 
 contract RaffleTest is Test{
@@ -163,6 +164,44 @@ contract RaffleTest is Test{
 
         assert(uint256(requestId) > 0); // memastikan requestId sudah digenerate
         assert(uint256(rState) == 1 );  // STATE = CALCULATING
+    }
 
+    /// fulfillRandomWords
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpKeep(uint256 randomRequestId) public raffleEnteredAndTimePassed{
+        //arrange , mencoba fullfill mock untuk mendapatkan random number
+        vm.expectRevert("nonexistent request");
+        VRFCoordinatorV2Mock(vrfCoordinator).fulfillRandomWords(randomRequestId, address(raffle));    // mengambil function dari VRFCoordinatorV2Mock
+    }
+
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEnteredAndTimePassed{
+        // Arrange
+        uint256 additionalEntrance = 5;    // untuk tambahan orang yang enter pada raffle
+        uint256 startingIndex = 1;          // akan memulai pada index 1 (ke-2)
+
+        for(uint256 i = startingIndex; i< startingIndex + additionalEntrance; i++){    // i dari 1 sampai 5, akan ditambah 1 secara terus sampai 5
+            address player = address(uint160(i)); // address semua secara berulang address1,address2,address3
+            hoax(player, STARTING_USER_BALANCE);   //set up prank dengan ether
+            raffle.enterRaffle{value: entranceFee}();
+
+        }
+
+        uint256 prize = entranceFee * (additionalEntrance + 1); // entranceFee x 6 = uang semua orang / Total Prize
+
+
+        // Act
+        vm.recordLogs();    // merekam emitted event , agar bisa diakses gunakan getRecordedLogs
+        raffle.performUpKeep("");   // emit requestId
+        Vm.Log[] memory entries = vm.getRecordedLogs(); // mendapatkan semua value dari events
+        bytes32 requestId = entries[1].topics[1]; // mengambil index 1 pada requestId
+
+        uint256 previousTimeStamp = raffle.getLastTimestamp();
+        VRFCoordinatorV2Mock(vrfCoordinator).fulfillRandomWords(uint256 (requestId), address(raffle));    // mengambil function dari VRFCoordinatorV2Mock
+
+        //assert
+        // assert(uint256(raffle.getRaffleState()) == 0);  // OPEN
+        // assert(raffle.getRecentWinner() != address(0)); // recent winner bukanlah yang address pertama
+        // assert(raffle.getLengthOfPlayer() == 0);    // direset setelah selesai
+        // assert(previousTimeStamp < raffle.getLastTimestamp());
+        assert(raffle.getRecentWinner().balance == STARTING_USER_BALANCE + prize - entranceFee);  // balance pemenang == total prize - biasa masuk(entranceFee)
     }
 }

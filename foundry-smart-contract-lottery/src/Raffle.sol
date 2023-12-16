@@ -145,7 +145,7 @@ contract Raffle is VRFConsumerBaseV2 {
         );
 
         emit RequestedRaffleWinner(requestId);
-        
+
     }
 
     // memilih winner, menggunakan fuction fullfillRandomWords dari VRFConsumerBaseV2
@@ -181,5 +181,17 @@ contract Raffle is VRFConsumerBaseV2 {
 
     function getPlayer(uint256 indexOfPlayer) external view returns(address){   // fungsi untuk memanggil player
         return s_players[indexOfPlayer];
+    }
+
+    function getRecentWinner() external view returns(address){
+        return s_recentWinner;
+    }
+
+    function getLengthOfPlayer() external view returns(uint256){
+        return s_players.length; // mendapatkan length dari player
+    }
+
+    function getLastTimestamp() external view returns(uint256){
+        return s_LastTimeStamp;
     }
 }
