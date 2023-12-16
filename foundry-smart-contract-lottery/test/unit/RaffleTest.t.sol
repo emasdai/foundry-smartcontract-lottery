@@ -5,6 +5,8 @@ import {DeployRaffle} from "../../script/DeployRaffle.s.sol";
 import {Raffle} from "../../src/Raffle.sol";
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {Vm} from "../../lib/forge-std/src/Vm.sol";
+
 
 contract RaffleTest is Test{
 
@@ -106,11 +108,61 @@ contract RaffleTest is Test{
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
         raffle.performUpKeep("");   // dalam CALCULATING_STATE
-        
         // Act
         (bool upkeepNeeded, ) = raffle.checkUpkeep("");
-        
         //Assert
         assert(upkeepNeeded == false);
+    }
+
+    function testPerformUpKeepCanOnlyRunIfCheckUpKeepIsTrue() public{
+        // arrage
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        //act
+        raffle.performUpKeep("");
+    }
+
+    function testPerformUpKeepRevertIfCheckUpKeepIsFalse() public {
+        // arrange
+        uint256 currentBalance = 0;
+        uint256 numPlayer = 0;
+        uint256 raffleState = 0;    // OPEN
+
+        //ACT and Assert
+        vm.expectRevert(        // memanggil varibel dari error di raffle.sol
+            abi.encodeWithSelector(
+                Raffle.Raffle__upkeepNotNeeded.selector, 
+                currentBalance, 
+                numPlayer, 
+                raffleState
+            )
+        );   
+        raffle.performUpKeep("");
+    }
+
+    // agar memudahkan coding, tidak perlu menulis prank, warp, roll dll.
+    modifier raffleEnteredAndTimePassed(){
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        _;
+    }
+    // what if I need to test using the output of an event?
+    // menambahkan modifier raffleEnteredAndTimePassed()
+    function testPerformUpKeepUpdatesRaffleStateAndEmitsRequestId() public raffleEnteredAndTimePassed{
+        // Act
+        vm.recordLogs();    // merekam emitted event , agar bisa diakses gunakan getRecordedLogs
+        raffle.performUpKeep("");   // emit requestId
+        Vm.Log[] memory entries = vm.getRecordedLogs(); // mendapatkan semua value dari events
+        bytes32 requestId = entries[1].topics[1]; // mengambil index 1 pada requestId
+
+        Raffle.RaffleState rState = raffle.getRaffleState();
+
+        assert(uint256(requestId) > 0); // memastikan requestId sudah digenerate
+        assert(uint256(rState) == 1 );  // STATE = CALCULATING
+
     }
 }

@@ -72,6 +72,7 @@ contract Raffle is VRFConsumerBaseV2 {
     /** EVENT */ // Allow logging to the Ethereum blockchain.
     event EnteredRaffle(address indexed player);
     event WinnerPick(address indexed winner);   
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     // constuctor dieksekusi pada saat pembuatan kontrak
     constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes32 gasLane, uint64 subscriptionId, uint32 callbackGasLimit) VRFConsumerBaseV2(vrfCoordinator){
@@ -135,13 +136,16 @@ contract Raffle is VRFConsumerBaseV2 {
         s_raffleState = RaffleState.CALCULATING;    // enum RaffleState berada pada state CALCULATING agar tidak ada yang bisa transfer saat pickWinner
 
         // 1. request RNG <- Chainlink VRF , Will revert if subscription is not set and funded.
-        i_vrfCoordinator.requestRandomWords(
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,              // keyhash
             i_subscriptionId,       // Subscription ID
             REQUEST_CONFIRMATION,   // request confirmation
             i_callbackGasLimit,     // max gas yang akan digunakan untuk request
             NUM_WORDS               // nomor dari random number yang diinginkan
         );
+
+        emit RequestedRaffleWinner(requestId);
+        
     }
 
     // memilih winner, menggunakan fuction fullfillRandomWords dari VRFConsumerBaseV2
