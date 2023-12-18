@@ -205,10 +205,10 @@ contract RaffleTest is Test{
         VRFCoordinatorV2Mock(vrfCoordinator).fulfillRandomWords(uint256 (requestId), address(raffle));    // mengambil function dari VRFCoordinatorV2Mock
 
         // assert
-        // assert(uint256(raffle.getRaffleState()) == 0);  // OPEN
-        // assert(raffle.getRecentWinner() != address(0)); // recent winner bukanlah yang address pertama
-        // assert(raffle.getLengthOfPlayer() == 0);    // direset setelah selesai
-        // assert(previousTimeStamp < raffle.getLastTimestamp());
+        assert(uint256(raffle.getRaffleState()) == 0);  // OPEN
+        assert(raffle.getRecentWinner() != address(0)); // recent winner bukanlah yang address pertama
+        assert(raffle.getLengthOfPlayer() == 0);    // direset setelah selesai
+        assert(previousTimeStamp < raffle.getLastTimestamp());
         assert(raffle.getRecentWinner().balance == STARTING_USER_BALANCE + prize - entranceFee);  // balance pemenang == total prize - biasa masuk(entranceFee)
     }
 }
