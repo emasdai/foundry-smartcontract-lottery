@@ -17,17 +17,18 @@ contract DeployRaffle is Script{
             bytes32 gasLane,
             uint64 subscriptionId,
             uint32 callbackGasLimit,
-            address link) = helperConfig.ActiveNetworkConfig();  // mengambil variable dari ActiveNetworkConfig
+            address link,
+            uint256 deployKey ) = helperConfig.ActiveNetworkConfig();  // mengambil variable dari ActiveNetworkConfig
         
         if(subscriptionId == 0){
             // kita harus membuat subscriptionID!
             CreateSubscription createSubscription = new CreateSubscription();
             subscriptionId = createSubscription.createSubscription(
-                vrfCoordinator);
+                vrfCoordinator, deployKey);
 
             // Fund it!
             FundSubscription fundSubscription = new FundSubscription();
-            fundSubscription.fundSubscription(vrfCoordinator, subscriptionId, link);
+            fundSubscription.fundSubscription(vrfCoordinator, subscriptionId, link, deployKey);
 
 
         }
@@ -46,8 +47,8 @@ contract DeployRaffle is Script{
 
         // menambahkan consumer baru
         AddConsumer addConsumer = new AddConsumer();
-        addConsumer.addConsumer(address(raffle), vrfCoordinator, subscriptionId);
+        addConsumer.addConsumer(address(raffle), vrfCoordinator, subscriptionId, deployKey);
         return (raffle, helperConfig);
 
-    }
+    }   
 }

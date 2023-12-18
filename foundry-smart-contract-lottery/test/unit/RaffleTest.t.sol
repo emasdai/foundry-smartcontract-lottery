@@ -38,7 +38,7 @@ contract RaffleTest is Test{
             gasLane,
             subscriptionId,
             callbackGasLimit,
-            link
+            link,
             
         ) = helperConfig.ActiveNetworkConfig();
         vm.deal(PLAYER, STARTING_USER_BALANCE); // menambahkan balance saat testing
@@ -166,14 +166,21 @@ contract RaffleTest is Test{
         assert(uint256(rState) == 1 );  // STATE = CALCULATING
     }
 
+    modifier skipFork(){
+        if(block.chainid != 31337){ // jika 
+            return;
+        }
+        _;
+    }
+
     /// fulfillRandomWords
-    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpKeep(uint256 randomRequestId) public raffleEnteredAndTimePassed{
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpKeep(uint256 randomRequestId) public raffleEnteredAndTimePassed skipFork{
         //arrange , mencoba fullfill mock untuk mendapatkan random number
         vm.expectRevert("nonexistent request");
         VRFCoordinatorV2Mock(vrfCoordinator).fulfillRandomWords(randomRequestId, address(raffle));    // mengambil function dari VRFCoordinatorV2Mock
     }
 
-    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEnteredAndTimePassed{
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEnteredAndTimePassed skipFork{
         // Arrange
         uint256 additionalEntrance = 5;    // untuk tambahan orang yang enter pada raffle
         uint256 startingIndex = 1;          // akan memulai pada index 1 (ke-2)
@@ -197,7 +204,7 @@ contract RaffleTest is Test{
         uint256 previousTimeStamp = raffle.getLastTimestamp();
         VRFCoordinatorV2Mock(vrfCoordinator).fulfillRandomWords(uint256 (requestId), address(raffle));    // mengambil function dari VRFCoordinatorV2Mock
 
-        //assert
+        // assert
         // assert(uint256(raffle.getRaffleState()) == 0);  // OPEN
         // assert(raffle.getRecentWinner() != address(0)); // recent winner bukanlah yang address pertama
         // assert(raffle.getLengthOfPlayer() == 0);    // direset setelah selesai
